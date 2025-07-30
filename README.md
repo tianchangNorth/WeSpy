@@ -4,7 +4,7 @@
 [![Python Support](https://img.shields.io/pypi/pyversions/wespy.svg)](https://pypi.org/project/wespy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-WeSpy 是一个用于获取网页文章并转换为 Markdown 格式的 Python 工具。特别针对微信公众号文章和普通网页文章进行了优化，支持图片防盗链处理和多种输出格式。
+WeSpy 是一个用于获取微信公众号文章并转换为 Markdown 格式的 Python 工具,支持图片防盗链处理和多种输出格式。
 
 ## 特性
 
@@ -39,9 +39,6 @@ pip install -e .
 ```bash
 # 获取微信公众号文章
 wespy "https://mp.weixin.qq.com/s/xxxxx"
-
-# 获取普通网页文章
-wespy "https://example.com/article"
 
 # 指定输出目录
 wespy "https://mp.weixin.qq.com/s/xxxxx" -o /path/to/output
@@ -206,8 +203,8 @@ A: 目前需要通过脚本调用 Python API 来实现批量处理，命令行�
 
 ## 联系方式
 
-- GitHub: [https://github.com/tianchang/wespy](https://github.com/tianchang/wespy)
-- Issues: [https://github.com/tianchang/wespy/issues](https://github.com/tianchang/wespy/issues)
+- GitHub: [https://github.com/tianchangNorth/WeSpy](https://github.com/tianchangNorth/WeSpy)
+- Issues: [https://github.com/tianchangNorth/WeSpy/issues](https://github.com/tianchangNorth/WeSpy/issues)
 
 ---
 

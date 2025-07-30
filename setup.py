@@ -5,13 +5,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='wespy',
-    version='0.1.1',
+    version='0.1.2',
     description='A Python tool for fetching web articles and converting them to Markdown format',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='tianchang',
     author_email='',
-    url='https://github.com/tianchang/wespy',
+    url='https://github.com/tianchangNorth/WeSpy',
     packages=find_packages(),
     install_requires=[
         'requests>=2.20.0',

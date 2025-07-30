@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wespy"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python tool for fetching web articles and converting them to Markdown format"
 readme = "README.md"
 requires-python = ">=3.6"
@@ -34,9 +34,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/tianchang/wespy"
-"Bug Reports" = "https://github.com/tianchang/wespy/issues"
-"Source" = "https://github.com/tianchang/wespy"
+"Homepage" = "https://github.com/tianchangNorth/WeSpy"
+"Bug Reports" = "https://github.com/tianchangNorth/WeSpy/issues"
+"Source" = "https://github.com/tianchangNorth/WeSpy"
 
 [project.scripts]
 wespy = "wespy.__main__:main"
