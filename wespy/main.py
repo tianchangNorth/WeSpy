@@ -347,18 +347,31 @@ class ArticleFetcher:
 
 def main():
     parser = argparse.ArgumentParser(description='获取文章内容并转换为Markdown')
-    parser.add_argument('url', help='文章URL')
+    parser.add_argument('url', nargs='?', help='文章URL')
     parser.add_argument('-o', '--output', default='articles', help='输出目录 (默认: articles)')
     parser.add_argument('-v', '--verbose', action='store_true', help='显示详细信息')
     
     args = parser.parse_args()
     
+    # 如果没有提供URL，进入交互模式
+    if not args.url:
+        print("文章获取工具")
+        print("=" * 40)
+        url = input("请输入文章URL: ").strip()
+        if not url:
+            print("URL不能为空!")
+            sys.exit(1)
+        output_dir = input("输出目录 (回车使用默认 'articles'): ").strip() or 'articles'
+    else:
+        url = args.url
+        output_dir = args.output
+    
     if args.verbose:
-        print(f"URL: {args.url}")
-        print(f"输出目录: {args.output}")
+        print(f"URL: {url}")
+        print(f"输出目录: {output_dir}")
     
     fetcher = ArticleFetcher()
-    result = fetcher.fetch_article(args.url, args.output)
+    result = fetcher.fetch_article(url, output_dir)
     
     if result:
         print(f"\n成功获取文章!")
@@ -370,22 +383,4 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    # 如果没有命令行参数，提供交互式输入
-    if len(sys.argv) == 1:
-        print("文章获取工具")
-        print("=" * 40)
-        url = input("请输入文章URL: ").strip()
-        output_dir = input("输出目录 (回车使用默认 'articles'): ").strip() or 'articles'
-        
-        fetcher = ArticleFetcher()
-        result = fetcher.fetch_article(url, output_dir)
-        
-        if result:
-            print(f"\n成功获取文章!")
-            print(f"标题: {result['title']}")
-            print(f"作者: {result['author']}")
-            print(f"发布时间: {result['publish_time']}")
-        else:
-            print("文章获取失败!")
-    else:
-        main()
+    main()
