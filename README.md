@@ -11,7 +11,7 @@ WeSpy 是一个用于获取微信公众号文章并转换为 Markdown 格式的 
 - 🚀 **智能文章提取**：自动识别文章标题、作者、发布时间和正文内容
 - 📱 **微信公众号支持**：专门优化微信公众号文章的提取
 - 🖼️ **图片防盗链处理**：自动处理图片防盗链问题，确保图片正常显示
-- 📝 **多格式输出**：支持 HTML、JSON 和 Markdown 多种输出格式
+- 📝 **灵活输出配置**：默认只输出 Markdown，可选择 HTML 和 JSON 格式
 - 🌐 **通用网页支持**：支持大多数网站的文章提取
 - 🎯 **命令行友好**：提供简单易用的命令行界面
 - 📂 **批量处理**：支持批量处理多个文章链接
@@ -37,11 +37,20 @@ pip install -e .
 ### 命令行使用
 
 ```bash
-# 获取微信公众号文章
+# 获取微信公众号文章（默认只输出 Markdown）
 wespy "https://mp.weixin.qq.com/s/xxxxx"
 
 # 指定输出目录
 wespy "https://mp.weixin.qq.com/s/xxxxx" -o /path/to/output
+
+# 输出 Markdown + HTML 格式
+wespy "https://example.com/article" --html
+
+# 输出 Markdown + JSON 格式
+wespy "https://example.com/article" --json
+
+# 输出所有格式（HTML + JSON + Markdown）
+wespy "https://example.com/article" --all
 
 # 显示详细信息
 wespy "https://example.com/article" -v
@@ -55,7 +64,12 @@ wespy "https://example.com/article" -v
 wespy
 ```
 
-然后根据提示输入文章 URL 和输出目录。
+然后根据提示输入文章 URL、输出目录和输出格式选择：
+
+1. 仅 Markdown（默认）
+2. Markdown + HTML
+3. Markdown + JSON  
+4. 全部格式（HTML + JSON + Markdown）
 
 ### Python API 使用
 
@@ -65,10 +79,19 @@ from wespy import ArticleFetcher
 # 创建文章获取器实例
 fetcher = ArticleFetcher()
 
-# 获取文章
+# 获取文章（默认只输出 Markdown）
 article_info = fetcher.fetch_article(
     url="https://mp.weixin.qq.com/s/xxxxx",
     output_dir="articles"
+)
+
+# 获取文章并指定输出格式
+article_info = fetcher.fetch_article(
+    url="https://mp.weixin.qq.com/s/xxxxx",
+    output_dir="articles",
+    save_html=True,      # 同时保存HTML文件
+    save_json=True,      # 同时保存JSON文件
+    save_markdown=True   # 保存Markdown文件（默认为True）
 )
 
 if article_info:
@@ -79,14 +102,20 @@ if article_info:
 
 ## 输出格式
 
-WeSpy 会为每篇文章生成三种格式的文件：
+WeSpy 默认只生成 Markdown 文件，但可以通过配置选项选择其他格式：
 
-1. **HTML 文件**：原始 HTML 内容
-2. **JSON 文件**：文章元数据信息
-3. **Markdown 文件**：转换后的 Markdown 格式内容
+### 默认输出（仅 Markdown）
+```
+articles/
+└── 文章标题_1627834567.md        # Markdown格式
+```
 
-### 输出文件示例
+### 可选格式
+- **HTML 文件**：原始 HTML 内容（使用 `--html` 选项）
+- **JSON 文件**：文章元数据信息（使用 `--json` 选项）
+- **Markdown 文件**：转换后的 Markdown 格式内容（默认生成）
 
+### 全部格式输出示例
 ```
 articles/
 ├── 文章标题_1627834567.html      # 原始HTML
@@ -123,7 +152,7 @@ WeSpy 使用智能算法尝试从以下元素中提取内容：
 ## 命令行选项
 
 ```
-wespy [-h] [-o OUTPUT] [-v] url
+wespy [-h] [-o OUTPUT] [-v] [--html] [--json] [--all] url
 
 获取文章内容并转换为Markdown
 
@@ -135,7 +164,16 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         输出目录 (默认: articles)
   -v, --verbose         显示详细信息
+  --html                同时保存HTML文件
+  --json                同时保存JSON信息文件
+  --all                 保存所有格式文件 (HTML, JSON, Markdown)
 ```
+
+### 输出格式选项说明
+- **默认行为**：只生成 Markdown 文件
+- **`--html`**：生成 Markdown + HTML 文件
+- **`--json`**：生成 Markdown + JSON 文件  
+- **`--all`**：生成所有格式文件（HTML + JSON + Markdown）
 
 ## 依赖要求
 
@@ -192,6 +230,12 @@ A: 目前需要通过脚本调用 Python API 来实现批量处理，命令行�
 本项目使用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 
 ## 更新日志
+
+### v0.1.2 (2025-01-01)
+- **改进输出格式配置**：默认只输出 Markdown 文件
+- **新增命令行选项**：`--html`、`--json`、`--all` 用于控制输出格式
+- **优化交互模式**：添加输出格式选择菜单
+- **更新 Python API**：支持参数化输出格式控制
 
 ### v0.1.0 (2023-07-30)
 - 初始版本发布

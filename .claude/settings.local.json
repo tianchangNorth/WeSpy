@@ -4,7 +4,8 @@
       "Bash(mkdir:*)",
       "Bash(move:*)",
       "Bash(mv:*)",
-      "Bash(rmdir:*)"
+      "Bash(rmdir:*)",
+      "Bash(python:*)"
     ],
     "deny": []
   }

@@ -28,13 +28,16 @@ class ArticleFetcher:
             'Upgrade-Insecure-Requests': '1',
         })
     
-    def fetch_article(self, url, output_dir="articles"):
+    def fetch_article(self, url, output_dir="articles", save_html=False, save_json=False, save_markdown=True):
         """
         获取文章内容
         
         Args:
             url (str): 文章URL
             output_dir (str): 输出目录
+            save_html (bool): 是否保存HTML文件
+            save_json (bool): 是否保存JSON文件
+            save_markdown (bool): 是否保存Markdown文件
         
         Returns:
             dict: 包含文章信息的字典
@@ -42,15 +45,15 @@ class ArticleFetcher:
         try:
             # 特殊处理微信公众号链接
             if 'mp.weixin.qq.com' in url:
-                return self._fetch_wechat_article(url, output_dir)
+                return self._fetch_wechat_article(url, output_dir, save_html, save_json, save_markdown)
             else:
-                return self._fetch_general_article(url, output_dir)
+                return self._fetch_general_article(url, output_dir, save_html, save_json, save_markdown)
                 
         except Exception as e:
             print(f"获取文章失败: {e}")
             return None
     
-    def _fetch_wechat_article(self, url, output_dir):
+    def _fetch_wechat_article(self, url, output_dir, save_html=False, save_json=False, save_markdown=True):
         """获取微信公众号文章"""
         print(f"正在获取微信文章: {url}")
         
@@ -70,11 +73,11 @@ class ArticleFetcher:
         article_info['html_content'] = response.text
         
         # 保存文章
-        self._save_article(article_info, output_dir)
+        self._save_article(article_info, output_dir, save_html, save_json, save_markdown)
         
         return article_info
     
-    def _fetch_general_article(self, url, output_dir):
+    def _fetch_general_article(self, url, output_dir, save_html=False, save_json=False, save_markdown=True):
         """获取普通网页文章"""
         print(f"正在获取文章: {url}")
         
@@ -93,7 +96,7 @@ class ArticleFetcher:
         article_info['html_content'] = response.text
         
         # 保存文章
-        self._save_article(article_info, output_dir)
+        self._save_article(article_info, output_dir, save_html, save_json, save_markdown)
         
         return article_info
     
@@ -199,7 +202,7 @@ class ArticleFetcher:
         
         return info
     
-    def _save_article(self, article_info, output_dir):
+    def _save_article(self, article_info, output_dir, save_html=False, save_json=False, save_markdown=True):
         """保存文章到文件"""
         # 创建输出目录
         if not os.path.exists(output_dir):
@@ -209,51 +212,61 @@ class ArticleFetcher:
         safe_title = re.sub(r'[<>:"/\\|?*]', '_', article_info['title'])[:50]
         timestamp = int(time.time())
         
+        saved_files = []
+        
         # 保存HTML文件
-        html_filename = f"{safe_title}_{timestamp}.html"
-        html_path = os.path.join(output_dir, html_filename)
-        
-        with open(html_path, 'w', encoding='utf-8') as f:
-            f.write(article_info['html_content'])
-        
-        print(f"HTML文件已保存: {html_path}")
+        if save_html:
+            html_filename = f"{safe_title}_{timestamp}.html"
+            html_path = os.path.join(output_dir, html_filename)
+            
+            with open(html_path, 'w', encoding='utf-8') as f:
+                f.write(article_info['html_content'])
+            
+            print(f"HTML文件已保存: {html_path}")
+            saved_files.append(('HTML', html_path))
         
         # 保存文章信息为JSON
-        info_filename = f"{safe_title}_{timestamp}_info.json"
-        info_path = os.path.join(output_dir, info_filename)
-        
-        info_to_save = {
-            'title': article_info['title'],
-            'author': article_info['author'],
-            'publish_time': article_info['publish_time'],
-            'url': article_info['url'],
-            'html_file': html_filename,
-            'fetch_time': time.strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        with open(info_path, 'w', encoding='utf-8') as f:
-            json.dump(info_to_save, f, ensure_ascii=False, indent=2)
-        
-        print(f"文章信息已保存: {info_path}")
-        
-        # 转换为Markdown
-        try:
-            markdown_content = self._convert_to_markdown(article_info['content_html'])
-            md_filename = f"{safe_title}_{timestamp}.md"
-            md_path = os.path.join(output_dir, md_filename)
+        if save_json:
+            info_filename = f"{safe_title}_{timestamp}_info.json"
+            info_path = os.path.join(output_dir, info_filename)
             
-            with open(md_path, 'w', encoding='utf-8') as f:
-                f.write(f"# {article_info['title']}\n\n")
-                f.write(f"**作者**: {article_info['author']}\n")
-                f.write(f"**发布时间**: {article_info['publish_time']}\n")
-                f.write(f"**原文链接**: {article_info['url']}\n\n")
-                f.write("---\n\n")
-                f.write(markdown_content)
+            info_to_save = {
+                'title': article_info['title'],
+                'author': article_info['author'],
+                'publish_time': article_info['publish_time'],
+                'url': article_info['url'],
+                'html_file': f"{safe_title}_{timestamp}.html" if save_html else None,
+                'fetch_time': time.strftime('%Y-%m-%d %H:%M:%S')
+            }
             
-            print(f"Markdown文件已保存: {md_path}")
+            with open(info_path, 'w', encoding='utf-8') as f:
+                json.dump(info_to_save, f, ensure_ascii=False, indent=2)
             
-        except Exception as e:
-            print(f"转换Markdown失败: {e}")
+            print(f"文章信息已保存: {info_path}")
+            saved_files.append(('JSON', info_path))
+        
+        # 转换为Markdown (默认保存)
+        if save_markdown:
+            try:
+                markdown_content = self._convert_to_markdown(article_info['content_html'])
+                md_filename = f"{safe_title}_{timestamp}.md"
+                md_path = os.path.join(output_dir, md_filename)
+                
+                with open(md_path, 'w', encoding='utf-8') as f:
+                    f.write(f"# {article_info['title']}\n\n")
+                    f.write(f"**作者**: {article_info['author']}\n")
+                    f.write(f"**发布时间**: {article_info['publish_time']}\n")
+                    f.write(f"**原文链接**: {article_info['url']}\n\n")
+                    f.write("---\n\n")
+                    f.write(markdown_content)
+                
+                print(f"Markdown文件已保存: {md_path}")
+                saved_files.append(('Markdown', md_path))
+                
+            except Exception as e:
+                print(f"转换Markdown失败: {e}")
+        
+        return saved_files
     
     def _convert_to_markdown(self, html_content):
         """将HTML内容转换为Markdown"""
@@ -350,6 +363,9 @@ def main():
     parser.add_argument('url', nargs='?', help='文章URL')
     parser.add_argument('-o', '--output', default='articles', help='输出目录 (默认: articles)')
     parser.add_argument('-v', '--verbose', action='store_true', help='显示详细信息')
+    parser.add_argument('--html', action='store_true', help='同时保存HTML文件')
+    parser.add_argument('--json', action='store_true', help='同时保存JSON信息文件')
+    parser.add_argument('--all', action='store_true', help='保存所有格式文件 (HTML, JSON, Markdown)')
     
     args = parser.parse_args()
     
@@ -362,16 +378,49 @@ def main():
             print("URL不能为空!")
             sys.exit(1)
         output_dir = input("输出目录 (回车使用默认 'articles'): ").strip() or 'articles'
+        
+        # 交互模式询问输出格式
+        print("\n输出格式选择:")
+        print("1. 仅 Markdown (默认)")
+        print("2. Markdown + HTML")
+        print("3. Markdown + JSON")
+        print("4. 全部格式 (HTML + JSON + Markdown)")
+        
+        choice = input("请选择 (1-4, 回车使用默认1): ").strip() or '1'
+        
+        save_html = False
+        save_json = False
+        save_markdown = True
+        
+        if choice == '2':
+            save_html = True
+        elif choice == '3':
+            save_json = True
+        elif choice == '4':
+            save_html = True
+            save_json = True
+            
     else:
         url = args.url
         output_dir = args.output
+        
+        # 命令行模式处理输出格式
+        if args.all:
+            save_html = True
+            save_json = True
+            save_markdown = True
+        else:
+            save_html = args.html
+            save_json = args.json
+            save_markdown = True  # 默认总是保存Markdown
     
     if args.verbose:
         print(f"URL: {url}")
         print(f"输出目录: {output_dir}")
+        print(f"输出格式: HTML={save_html}, JSON={save_json}, Markdown={save_markdown}")
     
     fetcher = ArticleFetcher()
-    result = fetcher.fetch_article(url, output_dir)
+    result = fetcher.fetch_article(url, output_dir, save_html, save_json, save_markdown)
     
     if result:
         print(f"\n成功获取文章!")
