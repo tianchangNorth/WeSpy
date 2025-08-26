@@ -109,8 +109,10 @@ class ArticleFetcher:
         info['title'] = title_elem.get_text().strip() if title_elem else "未知标题"
         
         # 作者
-        author_elem = soup.find('a', {'class': 'profile_nickname'}) or soup.find('span', {'class': 'profile_nickname'})
-        info['author'] = author_elem.get_text().strip() if author_elem else "未知作者"
+        author_elem = (soup.find('a', {'id': 'js_name'}) or 
+                      soup.find('a', {'class': 'profile_nickname'}) or 
+                      soup.find('span', {'class': 'profile_nickname'}))
+        info['author'] = author_elem.get_text().strip().replace('\n', '').replace('\r', '').replace('\t', '') if author_elem else "未知作者"
         
         # 发布时间
         time_elem = soup.find('em', {'id': 'publish_time'}) or soup.find('span', {'class': 'publish_time'})
@@ -148,7 +150,8 @@ class ArticleFetcher:
         # 作者
         author_elem = (soup.find('meta', {'name': 'author'}) or
                       soup.find('span', {'class': re.compile(r'author', re.I)}) or
-                      soup.find('div', {'class': re.compile(r'author', re.I)}))
+                      soup.find('div', {'class': re.compile(r'author', re.I)}) or
+                      soup.find('a', {'id': 'js_name'}))
         
         if author_elem:
             if author_elem.name == 'meta':
