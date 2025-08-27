@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-获取文章内容的脚本
-支持从URL获取网页内容并转换为Markdown格式
+掘金文章获取工具
+专门用于获取掘金平台文章内容并转换为Markdown格式
 """
 
 import os
-import sys
 import re
 import requests
 import urllib.parse
 from bs4 import BeautifulSoup
 import time
 import json
-import argparse
-from wespy.juejin import JuejinFetcher
 
-class ArticleFetcher:
+class JuejinFetcher:
     def __init__(self):
         self.session = requests.Session()
         # 设置请求头，模拟浏览器
@@ -27,13 +24,12 @@ class ArticleFetcher:
             'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
+            'Referer': 'https://juejin.cn/'
         })
-        # 初始化掘金获取器
-        self.juejin_fetcher = JuejinFetcher()
     
     def fetch_article(self, url, output_dir="articles", save_html=False, save_json=False, save_markdown=True):
         """
-        获取文章内容
+        获取掘金文章内容
         
         Args:
             url (str): 文章URL
@@ -46,26 +42,22 @@ class ArticleFetcher:
             dict: 包含文章信息的字典
         """
         try:
-            # 特殊处理微信公众号链接
-            if 'mp.weixin.qq.com' in url:
-                return self._fetch_wechat_article(url, output_dir, save_html, save_json, save_markdown)
-            # 特殊处理掘金链接
-            elif 'juejin.cn' in url:
-                return self.juejin_fetcher.fetch_article(url, output_dir, save_html, save_json, save_markdown)
-            else:
-                return self._fetch_general_article(url, output_dir, save_html, save_json, save_markdown)
+            if 'juejin.cn' not in url:
+                print("警告：URL不是掘金链接，但仍尝试获取")
+            
+            return self._fetch_juejin_article(url, output_dir, save_html, save_json, save_markdown)
                 
         except Exception as e:
-            print(f"获取文章失败: {e}")
+            print(f"获取掘金文章失败: {e}")
             return None
     
-    def _fetch_wechat_article(self, url, output_dir, save_html=False, save_json=False, save_markdown=True):
-        """获取微信公众号文章"""
-        print(f"正在获取微信文章: {url}")
+    def _fetch_juejin_article(self, url, output_dir, save_html=False, save_json=False, save_markdown=True):
+        """获取掘金文章"""
+        print(f"正在获取掘金文章: {url}")
         
-        # 设置微信特定的请求头
+        # 设置掘金特定的请求头
         headers = self.session.headers.copy()
-        headers['Referer'] = 'https://mp.weixin.qq.com/'
+        headers['Referer'] = 'https://juejin.cn/'
         
         response = self.session.get(url, headers=headers, timeout=30)
         response.raise_for_status()
@@ -74,7 +66,7 @@ class ArticleFetcher:
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # 提取文章信息
-        article_info = self._extract_wechat_info(soup)
+        article_info = self._extract_juejin_info(soup)
         article_info['url'] = url
         article_info['html_content'] = response.text
         
@@ -83,131 +75,54 @@ class ArticleFetcher:
         
         return article_info
     
-    def _fetch_general_article(self, url, output_dir, save_html=False, save_json=False, save_markdown=True):
-        """获取普通网页文章"""
-        print(f"正在获取文章: {url}")
-        
-        response = self.session.get(url, timeout=30)
-        response.raise_for_status()
-        
-        # 尝试检测编码
-        if response.encoding == 'ISO-8859-1':
-            response.encoding = response.apparent_encoding or 'utf-8'
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # 提取文章信息
-        article_info = self._extract_general_info(soup)
-        article_info['url'] = url
-        article_info['html_content'] = response.text
-        
-        # 保存文章
-        self._save_article(article_info, output_dir, save_html, save_json, save_markdown)
-        
-        return article_info
-    
-    def _extract_wechat_info(self, soup):
-        """提取微信文章信息"""
+    def _extract_juejin_info(self, soup):
+        """提取掘金文章信息"""
         info = {}
         
-        # 标题
-        title_elem = soup.find('h1', {'class': 'rich_media_title'}) or soup.find('h1')
+        # 标题 - 掘金标题通常在h1.article-title
+        title_elem = (soup.find('h1', {'class': 'article-title'}) or 
+                     soup.find('h1', {'class': 'article-title-text'}) or
+                     soup.find('h1'))
         info['title'] = title_elem.get_text().strip() if title_elem else "未知标题"
         
-        # 作者
-        author_elem = (soup.find('a', {'id': 'js_name'}) or 
-                      soup.find('a', {'class': 'profile_nickname'}) or 
-                      soup.find('span', {'class': 'profile_nickname'}))
-        info['author'] = author_elem.get_text().strip().replace('\n', '').replace('\r', '').replace('\t', '') if author_elem else "未知作者"
+        # 作者 - 掘金作者信息
+        author_elem = ( soup.find('span', {'class': 'name'}) )
+        info['author'] = author_elem.get_text().strip() if author_elem else "未知作者"
         
-        # 发布时间
-        time_elem = soup.find('em', {'id': 'publish_time'}) or soup.find('span', {'class': 'publish_time'})
+        # 发布时间 - 掘金时间信息
+        time_elem = (soup.find('span', {'class': 'time'}) or 
+                    soup.find('time') or
+                    soup.find('span', {'class': 'date'}))
         info['publish_time'] = time_elem.get_text().strip() if time_elem else ""
         
-        # 内容区域
-        content_elem = soup.find('div', {'id': 'js_content'})
+        # 内容区域 - 掘金文章内容
+        content_elem = (soup.find('div', {'id': 'article-root'}) or
+                       soup.find('div', {'class': 'article-content'}) or
+                       soup.find('div', {'class': 'markdown-body'}) or
+                       soup.find('article') or
+                       soup.find('div', {'id': 'article-content'}))
+        
         if content_elem:
-            info['content_html'] = str(content_elem)
-            info['content_text'] = content_elem.get_text().strip()
+            # 清理内容，移除CSS样式标签
+            cleaned_content = self._clean_content(content_elem)
+            info['content_html'] = str(cleaned_content)
+            info['content_text'] = cleaned_content.get_text().strip()
         else:
             info['content_html'] = ""
             info['content_text'] = ""
         
-        return info
-    
-    def _extract_general_info(self, soup):
-        """提取普通网页信息"""
-        info = {}
+        # 提取标签
+        tags = []
+        tag_elems = soup.find_all('a', {'class': 'tag'}) or soup.find_all('span', {'class': 'tag'})
+        for tag_elem in tag_elems:
+            tag_text = tag_elem.get_text().strip()
+            if tag_text:
+                tags.append(tag_text)
+        info['tags'] = tags
         
-        # 标题 - 尝试多种方式获取
-        title_elem = (soup.find('title') or 
-                     soup.find('h1') or 
-                     soup.find('h2') or
-                     soup.find('meta', {'property': 'og:title'}))
-        
-        if title_elem:
-            if title_elem.name == 'meta':
-                info['title'] = title_elem.get('content', '').strip()
-            else:
-                info['title'] = title_elem.get_text().strip()
-        else:
-            info['title'] = "未知标题"
-        
-        # 作者
-        author_elem = (soup.find('meta', {'name': 'author'}) or
-                      soup.find('span', {'class': re.compile(r'author', re.I)}) or
-                      soup.find('div', {'class': re.compile(r'author', re.I)}) or
-                      soup.find('a', {'id': 'js_name'}))
-        
-        if author_elem:
-            if author_elem.name == 'meta':
-                info['author'] = author_elem.get('content', '').strip()
-            else:
-                info['author'] = author_elem.get_text().strip()
-        else:
-            info['author'] = "未知作者"
-        
-        # 发布时间
-        time_elem = (soup.find('time') or
-                    soup.find('span', {'class': re.compile(r'time|date', re.I)}) or
-                    soup.find('meta', {'property': 'article:published_time'}))
-        
-        if time_elem:
-            if time_elem.name == 'meta':
-                info['publish_time'] = time_elem.get('content', '').strip()
-            else:
-                info['publish_time'] = time_elem.get_text().strip()
-        else:
-            info['publish_time'] = ""
-        
-        # 内容区域 - 尝试多种选择器
-        content_selectors = [
-            'article',
-            '.article-content',
-            '.content',
-            '.post-content',
-            '.entry-content',
-            '#content',
-            '.main-content',
-            'main'
-        ]
-        
-        content_elem = None
-        for selector in content_selectors:
-            content_elem = soup.select_one(selector)
-            if content_elem:
-                break
-        
-        if not content_elem:
-            # 如果没找到特定内容区域，使用body
-            content_elem = soup.find('body')
-        
-        if content_elem:
-            info['content_html'] = str(content_elem)
-            info['content_text'] = content_elem.get_text().strip()
-        else:
-            info['content_html'] = ""
-            info['content_text'] = ""
+        # 提取阅读数
+        view_count_elem = soup.find('span', {'class': 'view-count'}) or soup.find('span', {'class': 'read-count'})
+        info['view_count'] = view_count_elem.get_text().strip() if view_count_elem else ""
         
         return info
     
@@ -243,6 +158,8 @@ class ArticleFetcher:
                 'title': article_info['title'],
                 'author': article_info['author'],
                 'publish_time': article_info['publish_time'],
+                'tags': article_info.get('tags', []),
+                'view_count': article_info.get('view_count', ''),
                 'url': article_info['url'],
                 'html_file': f"{safe_title}_{timestamp}.html" if save_html else None,
                 'fetch_time': time.strftime('%Y-%m-%d %H:%M:%S')
@@ -265,6 +182,10 @@ class ArticleFetcher:
                     f.write(f"# {article_info['title']}\n\n")
                     f.write(f"**作者**: {article_info['author']}\n")
                     f.write(f"**发布时间**: {article_info['publish_time']}\n")
+                    if article_info.get('view_count'):
+                        f.write(f"**阅读量**: {article_info['view_count']}\n")
+                    if article_info.get('tags'):
+                        f.write(f"**标签**: {', '.join(article_info['tags'])}\n")
                     f.write(f"**原文链接**: {article_info['url']}\n\n")
                     f.write("---\n\n")
                     f.write(markdown_content)
@@ -484,79 +405,37 @@ class ArticleFetcher:
             base_url += "&n=-1"
         
         return base_url
+    
+    def _clean_content(self, content_elem):
+        """清理内容，移除CSS样式标签但保留文章内容"""
+        # 创建副本以避免修改原始soup
+        cleaned_content = BeautifulSoup(str(content_elem), 'html.parser')
+        
+        # 移除所有style标签
+        for style_tag in cleaned_content.find_all('style'):
+            style_tag.decompose()
+        
+        # 移除具有特定属性的style标签（掘金特有的样式）
+        for elem in cleaned_content.find_all(attrs={'data-highlight': True}):
+            elem.decompose()
+        
+        # 移除所有元素的style属性，但保留元素本身
+        for elem in cleaned_content.find_all(style=True):
+            del elem['style']
+        
+        # 如果内容是空的，尝试从其他选择器获取
+        if not cleaned_content.get_text().strip():
+            # 尝试获取article-root下的直接内容
+            article_root = cleaned_content.find('div', {'id': 'article-root'})
+            if article_root:
+                # 移除style标签但保留其他内容
+                for style_tag in article_root.find_all('style'):
+                    style_tag.decompose()
+                for elem in article_root.find_all(attrs={'data-highlight': True}):
+                    elem.decompose()
+                for elem in article_root.find_all(style=True):
+                    del elem['style']
+                return article_root
+        
+        return cleaned_content
 
-def main():
-    parser = argparse.ArgumentParser(description='获取文章内容并转换为Markdown')
-    parser.add_argument('url', nargs='?', help='文章URL')
-    parser.add_argument('-o', '--output', default='articles', help='输出目录 (默认: articles)')
-    parser.add_argument('-v', '--verbose', action='store_true', help='显示详细信息')
-    parser.add_argument('--html', action='store_true', help='同时保存HTML文件')
-    parser.add_argument('--json', action='store_true', help='同时保存JSON信息文件')
-    parser.add_argument('--all', action='store_true', help='保存所有格式文件 (HTML, JSON, Markdown)')
-    
-    args = parser.parse_args()
-    
-    # 如果没有提供URL，进入交互模式
-    if not args.url:
-        print("文章获取工具")
-        print("=" * 40)
-        url = input("请输入文章URL: ").strip()
-        if not url:
-            print("URL不能为空!")
-            sys.exit(1)
-        output_dir = input("输出目录 (回车使用默认 'articles'): ").strip() or 'articles'
-        
-        # 交互模式询问输出格式
-        print("\n输出格式选择:")
-        print("1. 仅 Markdown (默认)")
-        print("2. Markdown + HTML")
-        print("3. Markdown + JSON")
-        print("4. 全部格式 (HTML + JSON + Markdown)")
-        
-        choice = input("请选择 (1-4, 回车使用默认1): ").strip() or '1'
-        
-        save_html = False
-        save_json = False
-        save_markdown = True
-        
-        if choice == '2':
-            save_html = True
-        elif choice == '3':
-            save_json = True
-        elif choice == '4':
-            save_html = True
-            save_json = True
-            
-    else:
-        url = args.url
-        output_dir = args.output
-        
-        # 命令行模式处理输出格式
-        if args.all:
-            save_html = True
-            save_json = True
-            save_markdown = True
-        else:
-            save_html = args.html
-            save_json = args.json
-            save_markdown = True  # 默认总是保存Markdown
-    
-    if args.verbose:
-        print(f"URL: {url}")
-        print(f"输出目录: {output_dir}")
-        print(f"输出格式: HTML={save_html}, JSON={save_json}, Markdown={save_markdown}")
-    
-    fetcher = ArticleFetcher()
-    result = fetcher.fetch_article(url, output_dir, save_html, save_json, save_markdown)
-    
-    if result:
-        print(f"\n成功获取文章!")
-        print(f"标题: {result['title']}")
-        print(f"作者: {result['author']}")
-        print(f"发布时间: {result['publish_time']}")
-    else:
-        print("文章获取失败!")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
