@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='wespy',
-    version='0.1.4',
+    version='0.1.5',
     description='A Python tool for fetching web articles and converting them to Markdown format',
     long_description=long_description,
     long_description_content_type="text/markdown",
