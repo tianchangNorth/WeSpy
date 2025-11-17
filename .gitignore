@@ -113,6 +113,20 @@ dist/
 articles/
 test_output/
 
+# Publishing and deployment
+publish.sh
+scripts/publish_to_pypi.py
+requirements-publish.txt
+DEPLOYMENT.md
+
+# PyPI configuration and tokens
+.pypirc
+.twine
+
+# Build artifacts (redundant but explicit)
+*.tar.gz
+*.whl
+
 # Configuration files with sensitive data
 zhihu_config.json
 config.json
