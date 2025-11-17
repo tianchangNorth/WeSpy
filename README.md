@@ -37,7 +37,7 @@ pip install -e .
 ### 命令行使用
 
 ```bash
-# 获取微信公众号文章（默认只输出 Markdown）
+# 获取wx公众号文章（默认只输出 Markdown）
 wespy "https://mp.weixin.qq.com/s/xxxxx"
 
 # 指定输出目录
@@ -139,7 +139,7 @@ articles/
 ## 支持的网站
 
 ### 完全支持
-- 微信公众号 (mp.weixin.qq.com)
+- wx公众号 (mp.weixin.qq.com)
 - 大部分基于标准 HTML 结构的博客和新闻网站
 
 ### 通用支持
