@@ -4,12 +4,12 @@
 [![Python Support](https://img.shields.io/pypi/pyversions/wespy.svg)](https://pypi.org/project/wespy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-WeSpy 是一个用于获取微信公众号文章并转换为 Markdown 格式的 Python 工具,支持图片防盗链处理和多种输出格式。
+WeSpy 是一个用于获取wx公众号文章并转换为 Markdown 格式的 Python 工具,支持图片防盗链处理和多种输出格式。
 
 ## 特性
 
 - 🚀 **智能文章提取**：自动识别文章标题、作者、发布时间和正文内容
-- 📱 **微信公众号支持**：专门优化微信公众号文章的提取
+- 📱 **wx公众号支持**：专门优化wx公众号文章的提取
 - 🖼️ **图片防盗链处理**：自动处理图片防盗链问题，确保图片正常显示
 - 📝 **灵活输出配置**：默认只输出 Markdown，可选择 HTML 和 JSON 格式
 - 🌐 **通用网页支持**：支持大多数网站的文章提取
@@ -210,7 +210,7 @@ flake8 wespy/
 A: WeSpy 使用 images.weserv.nl 作为代理服务来解决图片防盗链问题。如果仍然无法显示，可能是原图片已被删除或网络问题。
 
 ### Q: 支持哪些网站？
-A: WeSpy 对微信公众号有特别优化，对大部分使用标准 HTML 结构的网站都有较好的支持。如果某个网站不支持，欢迎提交 issue。
+A: WeSpy 对wx公众号有特别优化，对大部分使用标准 HTML 结构的网站都有较好的支持。如果某个网站不支持，欢迎提交 issue。
 
 ### Q: 如何批量处理文章？
 A: 目前需要通过脚本调用 Python API 来实现批量处理，命令行版本暂不支持批量处理。
@@ -239,7 +239,7 @@ A: 目前需要通过脚本调用 Python API 来实现批量处理，命令行�
 
 ### v0.1.0 (2023-07-30)
 - 初始版本发布
-- 支持微信公众号文章提取
+- 支持wx公众号文章提取
 - 支持通用网页文章提取
 - 支持 HTML/JSON/Markdown 多格式输出
 - 图片防盗链处理
