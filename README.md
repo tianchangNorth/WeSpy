@@ -250,7 +250,9 @@ A: 目前需要通过脚本调用 Python API 来实现批量处理，命令行�
 - GitHub: [https://github.com/tianchangNorth/WeSpy](https://github.com/tianchangNorth/WeSpy)
 - Issues: [https://github.com/tianchangNorth/WeSpy/issues](https://github.com/tianchangNorth/WeSpy/issues)
 
----
+---  
+
+**推荐机场**：https://joinus-2.202402.best/#/register?code=HlpuGibO
 
 ## 免责声明
 
