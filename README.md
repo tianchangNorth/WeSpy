@@ -252,7 +252,9 @@ A: 目前需要通过脚本调用 Python API 来实现批量处理，命令行�
 
 ---  
 
-**推荐机场**：https://joinus-2.202402.best/#/register?code=HlpuGibO
+## 推荐🐔场
+
+自用🐔场，稳定，线路多，速度快，[点这里注册](https://joinus-2.202402.best/#/register?code=HlpuGibO)
 
 ## 免责声明
 
