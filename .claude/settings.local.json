@@ -6,7 +6,8 @@
       "Bash(mv:*)",
       "Bash(rmdir:*)",
       "Bash(python:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(bash:*)"
     ],
     "deny": []
   }
