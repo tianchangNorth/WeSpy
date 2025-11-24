@@ -16,6 +16,152 @@ import json
 import argparse
 from wespy.juejin import JuejinFetcher
 
+class WeChatAlbumFetcher:
+    """微信公众号专辑文章列表获取器"""
+
+    def __init__(self):
+        self.session = requests.Session()
+        # 使用微信浏览器的请求头
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.5',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Referer': 'https://mp.weixin.qq.com/'
+        })
+
+    def is_album_url(self, url):
+        """检查是否为微信专辑URL"""
+        return 'mp.weixin.qq.com/mp/appmsgalbum' in url
+
+    def parse_album_info(self, album_url):
+        """解析专辑URL获取基本信息"""
+        try:
+            from urllib.parse import urlparse, parse_qs
+            query = parse_qs(urlparse(album_url).query)
+
+            biz = query.get('__biz', [''])[0]
+            action = query.get('action', [''])[0]
+            album_id = query.get('album_id', [''])[0]
+
+            if not biz or not action or not album_id:
+                return None
+
+            return {
+                'biz': biz,
+                'action': action,
+                'album_id': album_id,
+                'original_url': album_url
+            }
+        except Exception as e:
+            print(f"解析专辑URL失败: {e}")
+            return None
+
+    def fetch_album_articles(self, album_url, max_articles=None):
+        """
+        获取专辑中的所有文章列表
+
+        Args:
+            album_url (str): 微信专辑URL
+            max_articles (int, optional): 最大获取文章数量，None表示获取所有
+
+        Returns:
+            list: 文章信息列表
+        """
+        album_info = self.parse_album_info(album_url)
+        if not album_info:
+            print("无法解析专辑URL")
+            return []
+
+        print(f"正在获取专辑文章列表...")
+        print(f"专辑ID: {album_info['album_id']}")
+
+        articles = []
+        begin_msgid = 0
+        begin_itemidx = 0
+        count = 10  # 每页获取数量
+
+        while True:
+            # 构建API请求URL
+            api_url = f"https://mp.weixin.qq.com/mp/appmsgalbum"
+            params = {
+                'action': 'getalbum',
+                '__biz': album_info['biz'],
+                'album_id': album_info['album_id'],
+                'count': str(count),
+                'begin_msgid': str(begin_msgid),
+                'begin_itemidx': str(begin_itemidx),
+                'f': 'json'
+            }
+
+            try:
+                response = self.session.get(api_url, params=params, timeout=30)
+                response.raise_for_status()
+
+                # 解析JSON响应
+                data = response.json()
+
+                # 检查响应状态
+                if data.get('base_resp', {}).get('ret') != 0:
+                    print(f"API返回错误: {data.get('base_resp', {})}")
+                    break
+
+                # 提取文章列表
+                album_resp = data.get('getalbum_resp', {})
+                article_list = album_resp.get('article_list', [])
+
+                if not article_list:
+                    print("没有更多文章了")
+                    break
+
+                # 处理文章信息
+                for article_data in article_list:
+                    article_info = {
+                        'title': article_data.get('title', ''),
+                        'url': article_data.get('url', ''),
+                        'msgid': article_data.get('msgid', ''),
+                        'create_time': article_data.get('create_time', ''),
+                        'cover_img': article_data.get('cover_img_1_1', ''),
+                        'itemidx': article_data.get('itemidx', ''),
+                        'key': article_data.get('key', '')
+                    }
+
+                    # 移除URL中的#rd后缀（如果有）
+                    if article_info['url'].endswith('#rd'):
+                        article_info['url'] = article_info['url'][:-3]
+
+                    articles.append(article_info)
+
+                    # 检查是否达到最大文章数量限制
+                    if max_articles and len(articles) >= max_articles:
+                        print(f"已达到最大文章数量限制: {max_articles}")
+                        return articles
+
+                print(f"已获取 {len(articles)} 篇文章...")
+
+                # 检查是否还有更多文章
+                continue_flag = album_resp.get('continue_flag', '0')
+                if continue_flag != '1':
+                    print("已获取所有文章")
+                    break
+
+                # 更新下一页的起始位置
+                if article_list:
+                    last_article = article_list[-1]
+                    begin_msgid = last_article.get('msgid', 0)
+                    begin_itemidx = last_article.get('itemidx', 0)
+
+                # 添加延迟避免请求过快
+                time.sleep(0.5)
+
+            except Exception as e:
+                print(f"获取文章列表失败: {e}")
+                break
+
+        print(f"总共获取到 {len(articles)} 篇文章")
+        return articles
+
 class ArticleFetcher:
     def __init__(self):
         self.session = requests.Session()
@@ -30,7 +176,122 @@ class ArticleFetcher:
         })
         # 初始化掘金获取器
         self.juejin_fetcher = JuejinFetcher()
-    
+        # 初始化微信专辑获取器
+        self.album_fetcher = WeChatAlbumFetcher()
+
+    def fetch_album_articles(self, album_url, output_dir="articles", max_articles=None, save_html=False, save_json=False, save_markdown=True):
+        """
+        批量获取微信专辑中的所有文章
+
+        Args:
+            album_url (str): 微信专辑URL
+            output_dir (str): 输出目录
+            max_articles (int, optional): 最大获取文章数量，None表示获取所有
+            save_html (bool): 是否保存HTML文件
+            save_json (bool): 是否保存JSON文件
+            save_markdown (bool): 是否保存Markdown文件
+
+        Returns:
+            list: 成功获取的文章信息列表
+        """
+        # 获取专辑文章列表
+        articles = self.album_fetcher.fetch_album_articles(album_url, max_articles)
+
+        if not articles:
+            print("没有获取到任何文章")
+            return []
+
+        print(f"\n开始批量下载 {len(articles)} 篇文章...")
+
+        successful_articles = []
+        failed_articles = []
+
+        # 创建专辑专用目录
+        album_name = f"album_{int(time.time())}"
+        album_output_dir = os.path.join(output_dir, album_name)
+
+        for i, article in enumerate(articles, 1):
+            print(f"\n[{i}/{len(articles)}] 正在下载: {article['title']}")
+
+            try:
+                # 下载单篇文章
+                article_result = self.fetch_article(
+                    article['url'],
+                    album_output_dir,
+                    save_html,
+                    save_json,
+                    save_markdown
+                )
+
+                if article_result:
+                    # 合并专辑信息
+                    article_result.update({
+                        'album_title': article.get('title', ''),
+                        'album_url': album_url,
+                        'msgid': article.get('msgid', ''),
+                        'create_time': article.get('create_time', ''),
+                        'cover_img': article.get('cover_img', '')
+                    })
+                    successful_articles.append(article_result)
+                    print(f"✅ 下载成功")
+                else:
+                    print(f"❌ 下载失败")
+                    failed_articles.append(article)
+
+                # 添加延迟避免请求过快
+                time.sleep(1)
+
+            except Exception as e:
+                print(f"❌ 下载失败: {e}")
+                failed_articles.append(article)
+
+        # 保存专辑汇总信息
+        self._save_album_summary(successful_articles, failed_articles, album_url, output_dir, album_name)
+
+        print(f"\n批量下载完成!")
+        print(f"成功: {len(successful_articles)} 篇")
+        print(f"失败: {len(failed_articles)} 篇")
+        print(f"文章保存在: {album_output_dir}")
+
+        return successful_articles
+
+    def _save_album_summary(self, successful_articles, failed_articles, album_url, output_dir, album_name):
+        """保存专辑下载汇总信息"""
+        summary = {
+            'album_url': album_url,
+            'download_time': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'statistics': {
+                'total_count': len(successful_articles) + len(failed_articles),
+                'successful_count': len(successful_articles),
+                'failed_count': len(failed_articles)
+            },
+            'successful_articles': [
+                {
+                    'title': article.get('title', ''),
+                    'author': article.get('author', ''),
+                    'url': article.get('url', ''),
+                    'msgid': article.get('msgid', ''),
+                    'create_time': article.get('create_time', '')
+                }
+                for article in successful_articles
+            ],
+            'failed_articles': [
+                {
+                    'title': article.get('title', ''),
+                    'url': article.get('url', ''),
+                    'msgid': article.get('msgid', ''),
+                    'error': '下载失败'
+                }
+                for article in failed_articles
+            ]
+        }
+
+        summary_file = os.path.join(output_dir, f"{album_name}_summary.json")
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            json.dump(summary, f, ensure_ascii=False, indent=2)
+
+        print(f"专辑汇总信息已保存: {summary_file}")
+
     def fetch_article(self, url, output_dir="articles", save_html=False, save_json=False, save_markdown=True):
         """
         获取文章内容
@@ -46,8 +307,12 @@ class ArticleFetcher:
             dict: 包含文章信息的字典
         """
         try:
+            # 特殊处理微信专辑URL
+            if self.album_fetcher.is_album_url(url):
+                print("检测到微信专辑URL，将批量下载专辑中的所有文章")
+                return self.fetch_album_articles(url, output_dir, max_articles=10, save_html=save_html, save_json=save_json, save_markdown=save_markdown)
             # 特殊处理微信公众号链接
-            if 'mp.weixin.qq.com' in url:
+            elif 'mp.weixin.qq.com' in url:
                 return self._fetch_wechat_article(url, output_dir, save_html, save_json, save_markdown)
             # 特殊处理掘金链接
             elif 'juejin.cn' in url:
@@ -493,6 +758,8 @@ def main():
     parser.add_argument('--html', action='store_true', help='同时保存HTML文件')
     parser.add_argument('--json', action='store_true', help='同时保存JSON信息文件')
     parser.add_argument('--all', action='store_true', help='保存所有格式文件 (HTML, JSON, Markdown)')
+    parser.add_argument('--max-articles', type=int, help='微信专辑最大下载文章数量 (默认: 10)')
+    parser.add_argument('--album-only', action='store_true', help='仅获取专辑文章列表，不下载内容')
     
     args = parser.parse_args()
     
@@ -526,7 +793,11 @@ def main():
         elif choice == '4':
             save_html = True
             save_json = True
-            
+
+        # 交互模式默认值
+        max_articles = 10
+        album_only = False
+
     else:
         url = args.url
         output_dir = args.output
@@ -540,23 +811,66 @@ def main():
             save_html = args.html
             save_json = args.json
             save_markdown = True  # 默认总是保存Markdown
-    
+
+        max_articles = args.max_articles or 10
+        album_only = args.album_only
+
     if args.verbose:
         print(f"URL: {url}")
         print(f"输出目录: {output_dir}")
         print(f"输出格式: HTML={save_html}, JSON={save_json}, Markdown={save_markdown}")
-    
+        if hasattr(args, 'max_articles'):
+            print(f"最大文章数量: {max_articles}")
+        if hasattr(args, 'album_only'):
+            print(f"仅获取列表: {album_only}")
+
     fetcher = ArticleFetcher()
-    result = fetcher.fetch_article(url, output_dir, save_html, save_json, save_markdown)
-    
-    if result:
-        print(f"\n成功获取文章!")
-        print(f"标题: {result['title']}")
-        print(f"作者: {result['author']}")
-        print(f"发布时间: {result['publish_time']}")
+
+    # 检查是否为专辑URL
+    if fetcher.album_fetcher.is_album_url(url):
+        if album_only:
+            # 仅获取专辑文章列表
+            print("仅获取专辑文章列表...")
+            articles = fetcher.album_fetcher.fetch_album_articles(url, max_articles)
+            if articles:
+                print(f"\n获取到 {len(articles)} 篇文章:")
+                for i, article in enumerate(articles, 1):
+                    print(f"{i:2d}. {article['title']}")
+                    print(f"     URL: {article['url']}")
+                    print(f"     时间: {article.get('create_time', 'N/A')}")
+                    if i < len(articles):
+                        print()
+
+                # 保存文章列表到文件
+                list_file = os.path.join(output_dir, f"album_articles_{int(time.time())}.json")
+                os.makedirs(output_dir, exist_ok=True)
+                with open(list_file, 'w', encoding='utf-8') as f:
+                    json.dump(articles, f, ensure_ascii=False, indent=2)
+                print(f"\n文章列表已保存到: {list_file}")
+            else:
+                print("未获取到任何文章")
+                sys.exit(1)
+        else:
+            # 批量下载专辑文章
+            result = fetcher.fetch_album_articles(url, output_dir, max_articles, save_html, save_json, save_markdown)
+            if result:
+                print(f"\n批量下载完成!")
+                print(f"成功下载: {len(result)} 篇文章")
+            else:
+                print("专辑文章下载失败!")
+                sys.exit(1)
     else:
-        print("文章获取失败!")
-        sys.exit(1)
+        # 单篇文章处理
+        result = fetcher.fetch_article(url, output_dir, save_html, save_json, save_markdown)
+
+        if result:
+            print(f"\n成功获取文章!")
+            print(f"标题: {result['title']}")
+            print(f"作者: {result['author']}")
+            print(f"发布时间: {result['publish_time']}")
+        else:
+            print("文章获取失败!")
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
