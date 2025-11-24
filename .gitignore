@@ -122,6 +122,39 @@ DEPLOYMENT.md
 # PyPI configuration and tokens
 .pypirc
 .twine
+.twine.conf
+
+# Release backup files
+*.bak
+setup.py.bak
+pyproject.toml.bak
+
+# Release script logs
+release.log
+publish.log
+
+# Release dependencies (optional - uncomment if you don't want to track them)
+# requirements-release.txt
+
+# Release artifacts and temporary files
+release_cache/
+temp_releases/
+*.upload
+*.pypi
+
+# Local publishing scripts (keep official ones, ignore local modifications)
+local_release.py
+custom_release.sh
+publish_debug.log
+
+# Build tool cache
+.wheel_cache/
+.pip_cache/
+
+# Version control for release scripts (optional - uncomment to ignore all)
+# release.py
+# quick-release.sh
+# RELEASE.md
 
 # Build artifacts (redundant but explicit)
 *.tar.gz
@@ -146,3 +179,8 @@ config.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+quick-release.sh
+RELEASE.md
+release.py
+requirements-release.txt
