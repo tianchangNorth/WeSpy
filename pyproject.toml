@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wespy"
-version = "0.1.5"
+version = "0.2.0"
 description = "A Python tool for fetching web articles and converting them to Markdown format"
 readme = "README.md"
 requires-python = ">=3.6"
