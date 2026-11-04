@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 import time
 import json
 import argparse
+from datetime import datetime, timedelta, timezone
 from wespy.juejin import JuejinFetcher
 
 class WeChatAlbumFetcher:
@@ -390,13 +391,27 @@ class ArticleFetcher:
         info['publish_time'] = time_elem.get_text().strip() if time_elem else ""
         # 遇到发布时间是页面渲染时 js set 进去的，所在直接从 html 里取
         if not info['publish_time']:
+            html_str = str(soup)
             m = re.search(
                 r"create_time:\s*JsDecode\('([^']+)'\)",
-                str(soup)
+                html_str
             )
             if m:
                 info['publish_time'] = m.group(1)
-        
+            else:
+                # 新版页面直接以字符串形式写入 create_time，而非数字时间戳
+                m = re.search(r"create_time:\s*'([^']+)'", html_str)
+                if m and not m.group(1).isdigit():
+                    info['publish_time'] = m.group(1)
+                else:
+                    # 兜底：从 var ct = "<unix 秒级时间戳>" 中取值并转为北京时间
+                    m = re.search(r'var\s+ct\s*=\s*"(\d+)"', html_str)
+                    if m:
+                        tz = timezone(timedelta(hours=8))
+                        info['publish_time'] = datetime.fromtimestamp(
+                            int(m.group(1)), tz
+                        ).strftime('%Y-%m-%d %H:%M')
+
         # 内容区域
         content_elem = soup.find('div', {'id': 'js_content'})
         if content_elem:
